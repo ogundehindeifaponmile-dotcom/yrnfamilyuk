@@ -277,7 +277,7 @@
             align-items: center; justify-content: center; overflow: hidden;
             transition: background var(--transition-speed) ease; 
         }
-        .qv-images img { width: 100%; height: 100%; max-height: 60vh; object-fit: contain; }
+        .qv-images img { width: 100%; height: 100%; max-height: 60vh; object-fit: contain; transition: opacity 0.3s ease; }
 
         .qv-info { padding: 40px; }
         .qv-info h2 { text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; color: var(--text); }
@@ -285,8 +285,23 @@
         .qv-sizes { margin-bottom: 24px; }
         .qv-sizes label { display: block; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; color: var(--text); }
         .size-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-        .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
-        .color-btn { text-transform: capitalize; }
+        .color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 8px; }
+        .color-btn { text-transform: capitalize; padding: 10px 4px; font-size: 7px; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 40px; }
+        .color-swatch {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            margin-bottom: 4px;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .color-btn:hover .color-swatch,
+        .color-btn.active .color-swatch {
+            border-color: var(--text);
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+        }
         .size-btn, .color-btn { border: 1px solid var(--border); background: var(--bg); cursor: pointer; transition: all 0.2s; font-family: inherit; color: var(--text); }
         .size-btn:hover:not(:disabled), .size-btn.active, .color-btn:hover, .color-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
         .size-btn:disabled, .color-btn:disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
@@ -351,7 +366,6 @@
         <a onclick="openTrackOrder(); toggleMobileMenu();">Track Order</a>
     </div>
 
-    <!-- NEW ANNOUNCEMENT BANNER -->
     <div class="announcement">
         🚀 NEW PRE-ORDER COLLECTION DROPPED! Secure your pieces now. Shipping in 2-3 weeks.
     </div>
@@ -525,18 +539,13 @@
             <div class="qv-info">
                 <h2 id="qvTitle">Product Name</h2>
                 <div class="qv-price" id="qvPrice">$0.00</div>
+                <div class="qv-sizes" id="colorsContainer" style="display: none;">
+                    <label>Color</label>
+                    <div class="color-grid" id="colorGrid"></div>
+                </div>
                 <div class="qv-sizes">
                     <label>Size</label>
                     <div class="size-grid" id="sizeGrid"></div>
-                </div>
-                <div class="qv-sizes" id="colorsContainer" style="display: none;">
-                    <label>Color</label>
-                    <div class="color-grid" id="colorGrid">
-                        <button class="color-btn" data-color="brown" onclick="selectColor(this)">Brown</button>
-                        <button class="color-btn" data-color="black" onclick="selectColor(this)">Black</button>
-                        <button class="color-btn" data-color="blue" onclick="selectColor(this)">Blue</button>
-                        <button class="color-btn" data-color="red" onclick="selectColor(this)">Red</button>
-                    </div>
                 </div>
                 <button class="qv-add-btn" id="qvAddBtn" onclick="addToCartFromQV()">Add to Cart</button>
             </div>
@@ -597,10 +606,10 @@
         let currentQVProduct = null;
         let currentQVSize = 'M';
         let currentQVColor = null;
+        let currentQVImg = null;
         let currentFilter = 'all';
         let customerInfo = {};
 
-        // ===== CURRENCY & LOCATION DETECTION =====
         let currentCurrency = 'USD';
         const exchangeRates = {
             'USD': { rate: 1, locale: 'en-US' },
@@ -655,10 +664,8 @@
             updateCart();
         }
 
-        // ===== SIZE PRICING MODIFIER =====
         function getAdjustedPrice(basePrice, size) {
             let modifier = 0;
-            // Only apply modifiers to standard clothing sizes, not CM belt sizes
             if (size === 'XS') modifier = -2.0;
             else if (size === 'S' || size === 'M') modifier = -1.5;
             else if (size === 'XL') modifier = 3.0;
@@ -667,16 +674,56 @@
             return Math.max(0, basePrice + modifier);
         }
 
+        // Color hex codes for swatches
+        const colorHex = {
+            'black': '#1a1a1a',
+            'white': '#ffffff',
+            'pink': '#ec4899',
+            'blue': '#3b82f6',
+            'sky blue': '#7dd3fc',
+            'green': '#22c55e',
+            'brown': '#92400e',
+            'red': '#dc2626'
+        };
+
         const products = [
-            // NEW PRE-ORDER COLLECTION ITEMS
-            { name: "SWAGUU PRE-ORDER: VANGUARD TEE [BLACK]", price: 35, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1790119519/703EA826-886E-4CAE-995E-50028CED3F3D_kmu2ou.png", category: "shirts", soldOut: false, preOrder: true, availableSizes: ['S', 'M', 'L', 'XL', 'XXL'] },
-            { name: "SWAGUU PRE-ORDER: PHANTOM BUCKET HAT [BLACK]", price: 40, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789965941/A4FFBA27-9015-4662-AA85-F4E4467018DF_l04nk1.png", category: "headgear", soldOut: false, preOrder: true, availableSizes: ['One Size'] },
+            // COLLECTION 1: MACHOS||FORM I - 5 COLOR VARIANTS
+            { 
+                name: "MACHOS||FORM I", 
+                price: 15, 
+                img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1791036498/F6B3FA95-3139-4454-8844-2C8D31294C49_lfyh3k.png", 
+                category: "shirts", 
+                soldOut: false, 
+                preOrder: true, 
+                availableSizes: ['S', 'M', 'L', 'XL', 'XXL'],
+                colorVariants: [
+                    { color: 'black', img: 'https://res.cloudinary.com/dzosy1sic/image/upload/v1791036498/75C97C0C-C5DD-4F79-BDE5-5B7F92A5C24C_vukdrw.png' },
+                    { color: 'white', img: 'https://res.cloudinary.com/dzosy1sic/image/upload/v1791036500/74483B35-C813-45EB-A93B-07FF1C8BAAFF_nvceig.png' },
+                    { color: 'pink', img: 'https://res.cloudinary.com/dzosy1sic/image/upload/v1791036500/79884DBE-4279-4558-B24B-F12C46B2D7AF_gvkelj.png' },
+                    { color: 'blue', img: 'https://res.cloudinary.com/dzosy1sic/image/upload/v1790037208/90745189-EB23-4E40-92C0-85F6F4BC2CF7_trrvuj.png' },
+                    { color: 'sky blue', img: 'https://res.cloudinary.com/dzosy1sic/image/upload/v1791036497/062EE1C0-7800-491B-B06D-C1906AF5923C_ss7s9g.png' }
+                ]
+            },
+            // COLLECTION 2: THE FAMILY // STATEMENT SERIES - 2 COLOR VARIANTS
+            { 
+                name: "THE FAMILY // STATEMENT SERIES", 
+                price: 16.5, 
+                img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1791036402/0ACBE178-B426-44C9-A38D-3970F1EE7CB9_wuh8pf.png", 
+                category: "shirts", 
+                soldOut: false, 
+                preOrder: true, 
+                availableSizes: ['M', 'L', 'XL'],
+                colorVariants: [
+                    { color: 'black', img: 'https://res.cloudinary.com/dzosy1sic/image/upload/v1791036402/0ACBE178-B426-44C9-A38D-3970F1EE7CB9_wuh8pf.png' },
+                    { color: 'white', img: 'https://res.cloudinary.com/dzosy1sic/image/upload/v1791036468/A8782299-CD3A-4812-BE9D-DA29829D5EFF_d240ac.png' }
+                ]
+            },
             
             // REGULAR ITEMS
-            { name: "SWAGUU LIMITED LONG SLEEVE SHIRT [WHITE]", price: 27.8, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789966780/60BA0A7D-B2EA-4264-83C3-756440A6B3B0_ni2g3v.png", category: "shirts", soldOut: false, availableSizes: ['S', 'M', 'L', 'XL'] },
+            { name: "SWAGUU LIMITED LONG SLEEVE SHIRT [WHITE]", price: 23, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789966780/60BA0A7D-B2EA-4264-83C3-756440A6B3B0_ni2g3v.png", category: "shirts", soldOut: false, availableSizes: ['S', 'M', 'L', 'XL'] },
             { name: "SWAGUU LADIES MINI-GOWN W-MAROONED", price: 17.5, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789966932/DB9F7881-2869-47DE-A842-4F4F97216DB9_dgdwv6.png", category: "shirts", soldOut: false, availableSizes: ['XS', 'S', 'M', 'L'] },
             { name: "BLACK SWAGUU CRABBED TEE", price: 18, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789966784/FA8DC86D-AB25-45D3-BD3B-9E3879BB8374_abuuna.png", category: "shirts", soldOut: false, availableSizes: ['S', 'M', 'L', 'XL', 'XXL'] },
-            { name: "AURA EDITION STRAP", price: 22, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789960334/84D745C2-9878-43B5-8D30-E37F554FB7D1_ztupxu.jpg", category: "belts", soldOut: false, availableSizes: ['90cm', '100cm', '110cm'] },
+            { name: "AURA EDITION STRAP", price: 22, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789960334/84D745C2-9878-43B5-8D30-E37F554FB7D1_ztupxu.jpg", category: "belts", soldOut: false, availableSizes: ['90cm', '100cm', '110cm'], hasSimpleColors: true },
             { name: "[Y2K] SGFMCLAGOS TEE", price: 17.9, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789967864/7EC9DAD3-88D0-43FE-805D-AAED29B53B8A_ojtmtd.png", category: "shirts", soldOut: false, availableSizes: ['M', 'L', 'XL'] },
             { name: "YAMI'S TEE WHITE", price: 17.5, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1789922848/1A73173E-6D6C-460D-8772-F23B840FF56C_zpl8ie.jpg", category: "shirts", soldOut: false, availableSizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
             { name: "yrnSWAGGERNOMETRY SHIRT LONG SLEEVE EDITION [PINK]", price: 25, img: "https://res.cloudinary.com/dzosy1sic/image/upload/v1790119519/703EA826-886E-4CAE-995E-50028CED3F3D_kmu2ou.png", category: "shirts", soldOut: false, availableSizes: ['M', 'L', 'XL', 'XXL'] },
@@ -706,20 +753,26 @@
 
             if (filtered.length === 0) { grid.innerHTML = `<div class="no-products"><h3>No products yet</h3><p>Check back soon.</p></div>`; return; }
 
-            grid.innerHTML = filtered.map((p, i) => `
-                <div class="product-card" onclick="openQuickView(${products.indexOf(p)})">
-                    <div class="product-img-wrap">
-                        ${p.soldOut ? '<span class="sold-out-badge">Sold Out</span>' : ''}
-                        ${p.preOrder ? '<span class="sold-out-badge" style="background:#3b82f6;color:#fff;">PRE-ORDER</span>' : ''}
-                        <img src="${p.img}" alt="${p.name}" style="position:static;opacity:1;">
-                        <button class="quick-add" onclick="event.stopPropagation(); openQuickView(${products.indexOf(p)})">${p.preOrder ? 'Pre-Order' : 'Quick View'}</button>
+            grid.innerHTML = filtered.map((p, i) => {
+                const hasColors = p.colorVariants || p.hasSimpleColors;
+                return `
+                    <div class="product-card" onclick="openQuickView(${products.indexOf(p)})">
+                        <div class="product-img-wrap">
+                            ${p.soldOut ? '<span class="sold-out-badge">Sold Out</span>' : ''}
+                            ${p.preOrder ? '<span class="sold-out-badge" style="background:#3b82f6;color:#fff;">PRE-ORDER</span>' : ''}
+                            <img src="${p.img}" alt="${p.name}" style="position:static;opacity:1;">
+                            <button class="quick-add" onclick="event.stopPropagation(); openQuickView(${products.indexOf(p)})">${p.preOrder ? 'Select Color' : 'Quick View'}</button>
+                        </div>
+                        <div class="product-info">
+                            <div class="product-name">${p.name}</div>
+                            <div class="product-price">
+                                ${formatPrice(p.price)}
+                                ${hasColors ? '<span style="font-size:8px;color:var(--text-secondary);margin-left:6px;">+ COLORS</span>' : ''}
+                            </div>
+                        </div>
                     </div>
-                    <div class="product-info">
-                        <div class="product-name">${p.name}</div>
-                        <div class="product-price">${formatPrice(p.price)}</div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function filterProducts(category) {
@@ -792,28 +845,79 @@
         function openQuickView(index) {
             const p = products[index];
             currentQVProduct = p;
+            currentQVImg = p.img;
             document.getElementById('qvImg').src = p.img;
             document.getElementById('qvTitle').textContent = p.name;
             
+            // Setup color swatches
+            const colorsContainer = document.getElementById('colorsContainer');
+            const colorGrid = document.getElementById('colorGrid');
+            colorGrid.innerHTML = '';
+            currentQVColor = null;
+
+            if (p.colorVariants) {
+                // NEW COLOR VARIANT SYSTEM - Image changes on click
+                colorsContainer.style.display = 'block';
+                p.colorVariants.forEach((variant, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'color-btn';
+                    btn.dataset.color = variant.color;
+                    btn.dataset.img = variant.img;
+                    btn.dataset.variantIndex = idx;
+                    btn.innerHTML = `
+                        <div class="color-swatch" style="background:${colorHex[variant.color] || '#ccc'}; ${variant.color === 'white' ? 'border-color:#ccc;' : ''}"></div>
+                        <span style="font-size:7px;text-transform:capitalize;">${variant.color}</span>
+                    `;
+                    btn.onclick = () => selectColor(btn);
+                    colorGrid.appendChild(btn);
+                });
+                // Default to first color
+                const firstBtn = colorGrid.querySelector('.color-btn');
+                if (firstBtn) {
+                    firstBtn.classList.add('active');
+                    currentQVColor = firstBtn.dataset.color;
+                    currentQVImg = firstBtn.dataset.img;
+                    document.getElementById('qvImg').src = currentQVImg;
+                }
+            } else if (p.hasSimpleColors) {
+                // LEGACY AURA EDITION STRAP SYSTEM
+                colorsContainer.style.display = 'block';
+                const simpleColors = ['brown', 'black', 'blue', 'red'];
+                simpleColors.forEach(color => {
+                    const btn = document.createElement('button');
+                    btn.className = 'color-btn';
+                    btn.dataset.color = color;
+                    btn.innerHTML = `
+                        <div class="color-swatch" style="background:${colorHex[color]}; ${color === 'white' ? 'border-color:#ccc;' : ''}"></div>
+                        <span style="font-size:7px;text-transform:capitalize;">${color}</span>
+                    `;
+                    btn.onclick = () => selectColor(btn);
+                    colorGrid.appendChild(btn);
+                });
+                const defaultBtn = colorGrid.querySelector('[data-color="black"]');
+                if (defaultBtn) {
+                    defaultBtn.classList.add('active');
+                    currentQVColor = 'black';
+                }
+            } else {
+                colorsContainer.style.display = 'none';
+            }
+
+            // Setup sizes
             const sizeGrid = document.getElementById('sizeGrid');
             sizeGrid.innerHTML = '';
-            
             const isBelt = p.category === 'belts';
             const standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
             const beltSizes = ['90cm', '100cm', '110cm'];
             const sizesToRender = isBelt ? beltSizes : standardSizes;
-            
             const available = p.availableSizes || sizesToRender;
             
             sizesToRender.forEach(size => {
                 if (!available.includes(size)) return;
-                
                 const btn = document.createElement('button');
                 btn.className = 'size-btn';
                 btn.textContent = size;
-                if ((isBelt && size === '100cm') || (!isBelt && size === 'M')) {
-                    btn.classList.add('active');
-                }
+                if ((isBelt && size === '100cm') || (!isBelt && size === 'M')) btn.classList.add('active');
                 btn.onclick = () => selectSize(btn);
                 sizeGrid.appendChild(btn);
             });
@@ -832,17 +936,6 @@
             } else { 
                 btn.textContent = 'Add to Cart — ' + formatPrice(adjustedPrice); 
                 btn.disabled = false; 
-            }
-            
-            const colorsContainer = document.getElementById('colorsContainer');
-            if (p.name.includes("AURA EDITION STRAP")) {
-                colorsContainer.style.display = 'block';
-                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-                const defaultColorBtn = document.querySelector('.color-btn[data-color="black"]');
-                if (defaultColorBtn) { defaultColorBtn.classList.add('active'); currentQVColor = 'black'; }
-            } else {
-                colorsContainer.style.display = 'none';
-                currentQVColor = null;
             }
 
             document.getElementById('modalOverlay').classList.add('open');
@@ -872,6 +965,12 @@
             document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentQVColor = btn.dataset.color;
+            
+            // If this is a color variant product, update the image
+            if (btn.dataset.img) {
+                currentQVImg = btn.dataset.img;
+                document.getElementById('qvImg').src = currentQVImg;
+            }
         }
 
         function addToCartFromQV() {
@@ -881,14 +980,19 @@
             const itemData = { 
                 name: currentQVProduct.name, 
                 price: adjustedPrice, 
-                img: currentQVProduct.img, 
+                img: currentQVImg || currentQVProduct.img,
                 size: currentQVSize, 
                 qty: 1,
                 preOrder: currentQVProduct.preOrder || false
             };
             if (currentQVColor) itemData.color = currentQVColor;
 
-            const existing = cart.find(item => item.name === currentQVProduct.name && item.size === currentQVSize && item.color === currentQVColor);
+            const existing = cart.find(item => 
+                item.name === currentQVProduct.name && 
+                item.size === currentQVSize && 
+                item.color === currentQVColor &&
+                item.img === (currentQVImg || currentQVProduct.img)
+            );
             if (existing) { existing.qty++; } 
             else { cart.push(itemData); }
             
@@ -917,7 +1021,6 @@
             `;
         }
 
-        // ===== CHECKOUT MODAL (2-STEP FLOW) =====
         function checkout() {
             if (cart.length === 0) return;
             
